@@ -1,6 +1,7 @@
 import pygame
 import neat
 import random
+import os
 from enum import Enum
 from collections import namedtuple
 
@@ -13,7 +14,7 @@ class global_information:
     BLOCK_SIZE = 20
     WIDTH = 20
     HEIGHT = 20
-    SPEED = 60
+    SPEED = 40
     WIN_WIDTH = WIDTH * BLOCK_SIZE
     WIN_HEIGHT = HEIGHT * BLOCK_SIZE
 
@@ -114,13 +115,11 @@ class Snake:
         game_over = False
         if self._is_collide() or self.frame_iteration > 50 * len(self.snake):
             game_over = True
-            return game_over, self.score
-
-        self.score += 2
+            return game_over, self.score, self.frame_iteration
 
         # 4. place new food or just move
         if self.head == self.food:
-            self.score += 10
+            self.score += 1
             self._place_food()
         else:
             self.snake.pop()
@@ -129,7 +128,7 @@ class Snake:
         self._update_ui()
         self.clock.tick(GLOBAL_INFO.SPEED)
         # 6. return game over and score
-        return game_over, self.score
+        return game_over, self.score, self.frame_iteration
 
     def _update_ui(self):
         GLOBAL_INFO.WIN.fill(BLACK)
@@ -311,11 +310,10 @@ def eval_genome(genomes, config):
 
             if value[0]:
                 run = False
-                gene.fitness = value[1]
+                gene.fitness = value[1] + (value[2] / 1000)
 
 
 def run(config_file):
-
     config = neat.Config(
         neat.DefaultGenome,
         neat.DefaultReproduction,
@@ -330,7 +328,12 @@ def run(config_file):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-
     winner = p.run(eval_genome, 50)
 
-    print('\nBest genome:\n{!s}'.format(winner))
+    print("\nBest genome:\n{!s}".format(winner))
+
+
+if __name__ == "__main__":
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, "config_file.txt")
+    run(config_path)
