@@ -196,13 +196,11 @@ class Snake:
         return False
 
     def get_inputs(self):
-        # 1. Head (x/X, y/Y)
-        x_head = self.head.x / GLOBAL_INFO.WIDTH
-        y_head = self.head.y / GLOBAL_INFO.HEIGHT
-
-        # 2. Food (x/X, y/Y)
-        x_food = self.food.x / GLOBAL_INFO.WIDTH
-        y_food = self.food.y / GLOBAL_INFO.HEIGHT
+        # 1. Food Location(One-Hot Encoded)
+        food_r = self.food.x > self.head.x
+        food_d = self.food.y > self.head.y
+        food_l = self.food.x < self.head.x
+        food_u = self.food.y < self.head.y
 
         # 3. Walls (left, right, straight)
 
@@ -272,10 +270,10 @@ class Snake:
         dir_up = self.direction == Direction.UP
 
         return (
-            x_head,
-            y_head,
-            x_food,
-            y_food,
+            food_r,
+            food_d,
+            food_l,
+            food_u,
             left_wall,
             straight_wall,
             right_wall,
@@ -285,7 +283,7 @@ class Snake:
             dir_right,
             dir_down,
             dir_left,
-            dir_up
+            dir_up,
         )
 
 
