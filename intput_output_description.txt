@@ -1,0 +1,16 @@
+[INPUTS]
+# All inputs are fractions of x/WIDTH, y/HEIGHT
+x_head
+y_head
+x_food
+y_food
+left_wall
+straight_wall
+right_wall
+left_body
+straight_body
+right_body
+length
+
+[OUTPUTS]
+4 Output Nodes

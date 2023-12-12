@@ -14,7 +14,7 @@ class global_information:
     BLOCK_SIZE = 20
     WIDTH = 20
     HEIGHT = 20
-    SPEED = 40
+    SPEED = 90
     WIN_WIDTH = WIDTH * BLOCK_SIZE
     WIN_HEIGHT = HEIGHT * BLOCK_SIZE
 
