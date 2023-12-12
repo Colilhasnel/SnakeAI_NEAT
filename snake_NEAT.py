@@ -7,6 +7,7 @@ from collections import namedtuple
 pygame.init()
 font = pygame.font.Font("arial.ttf", 25)
 
+
 # Global Information class containing all variables
 class global_information:
     BLOCK_SIZE = 20
@@ -21,8 +22,10 @@ class global_information:
 
     GEN = 0
 
+
 # Instance of global_information to be used by all functions
 GLOBAL_INFO = global_information()
+
 
 class Direction(Enum):
     RIGHT = 1
@@ -279,3 +282,55 @@ class Snake:
             right_body,
             length,
         )
+
+
+# Gene evaluation function for NEAT
+def eval_genome(genomes, config):
+    GLOBAL_INFO.GEN += 1
+
+    # list containing genomes and corresponding neural networks
+    genes = []
+    networks = []
+
+    individual = 0
+
+    for gene_id, gene in genomes:
+        individual += 1
+        # Set initial fitness of all genes = 0, create neural networks and add then to the lists above
+        gene.fitness = 0
+        neural_net = neat.nn.FeedForwardNetwork.create(gene, config)
+        networks.append(neural_net)
+        genes.append(gene)
+        snake = Snake(GLOBAL_INFO.GEN, individual)
+
+        run = True
+        while run:
+            outputs = neural_net.activate(snake.get_inputs())
+            action = outputs.index(max(outputs))
+            value = snake.play_step(action)
+
+            if value[0]:
+                run = False
+                gene.fitness = value[1]
+
+
+def run(config_file):
+
+    config = neat.Config(
+        neat.DefaultGenome,
+        neat.DefaultReproduction,
+        neat.DefaultSpeciesSet,
+        neat.DefaultStagnation,
+        config_file,
+    )
+
+    p = neat.Population(config)
+
+    p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+
+
+    winner = p.run(eval_genome, 50)
+
+    print('\nBest genome:\n{!s}'.format(winner))
