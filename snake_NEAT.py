@@ -265,8 +265,11 @@ class Snake:
         right_body = clockwise_body_distances[(curr_direction + 1) % 4]
         left_body = clockwise_body_distances[(curr_direction - 1) % 4]
 
-        # 5. Length (len/area)
-        length = len(self.snake) / (GLOBAL_INFO.WIDTH * GLOBAL_INFO.HEIGHT)
+        # 5. One-Hot Encoded Direction of Snake
+        dir_right = self.direction == Direction.RIGHT
+        dir_down = self.direction == Direction.DOWN
+        dir_left = self.direction == Direction.LEFT
+        dir_up = self.direction == Direction.UP
 
         return (
             x_head,
@@ -279,7 +282,10 @@ class Snake:
             left_body,
             straight_body,
             right_body,
-            length,
+            dir_right,
+            dir_down,
+            dir_left,
+            dir_up
         )
 
 

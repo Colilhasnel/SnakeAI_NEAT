@@ -1,5 +1,5 @@
 [INPUTS]
-# All inputs are fractions of x/WIDTH, y/HEIGHT
+# These inputs are fractions of x/WIDTH, y/HEIGHT
 x_head
 y_head
 x_food
@@ -10,7 +10,8 @@ right_wall
 left_body
 straight_body
 right_body
-length
+# These inputs are one-hot encoded
+Direction_of_snake(dir_right, dir_down, dir_left, dir_up)
 
 [OUTPUTS]
 4 Output Nodes
