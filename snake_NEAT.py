@@ -1,5 +1,5 @@
 import pygame
-import numpy as np
+import neat
 import random
 from enum import Enum
 from collections import namedtuple
@@ -7,16 +7,22 @@ from collections import namedtuple
 pygame.init()
 font = pygame.font.Font("arial.ttf", 25)
 
-BLOCK_SIZE = 20
-WIDTH = 20
-HEIGHT = 20
-SPEED = 60
-WIN_WIDTH = WIDTH * BLOCK_SIZE
-WIN_HEIGHT = HEIGHT * BLOCK_SIZE
+# Global Information class containing all variables
+class global_information:
+    BLOCK_SIZE = 20
+    WIDTH = 20
+    HEIGHT = 20
+    SPEED = 60
+    WIN_WIDTH = WIDTH * BLOCK_SIZE
+    WIN_HEIGHT = HEIGHT * BLOCK_SIZE
 
-WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
-pygame.display.set_caption("Snake Game")
+    WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+    pygame.display.set_caption("Snake Game")
 
+    GEN = 0
+
+# Instance of global_information to be used by all functions
+GLOBAL_INFO = global_information()
 
 class Direction(Enum):
     RIGHT = 1
@@ -36,18 +42,20 @@ BLACK = (0, 0, 0)
 
 
 class Snake:
-    def __init__(self):
+    def __init__(self, generation, individual):
+        self.generation = generation
+        self.individual = individual
         self.clock = pygame.time.Clock()
         self.reset()
 
     def reset(self):
         self.direction = Direction.RIGHT
 
-        self.head = Point(WIN_WIDTH / 2, WIN_HEIGHT / 2)
+        self.head = Point(GLOBAL_INFO.WIN_WIDTH / 2, GLOBAL_INFO.WIN_HEIGHT / 2)
         self.snake = [
             self.head,
-            Point(self.head.x - BLOCK_SIZE, self.head.y),
-            Point(self.head.x - 2 * BLOCK_SIZE, self.head.y),
+            Point(self.head.x - GLOBAL_INFO.BLOCK_SIZE, self.head.y),
+            Point(self.head.x - 2 * GLOBAL_INFO.BLOCK_SIZE, self.head.y),
         ]
 
         self.score = 0
@@ -57,8 +65,22 @@ class Snake:
         self._place_food()
 
     def _place_food(self):
-        x = random.randint(0, (WIN_WIDTH - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
-        y = random.randint(0, (WIN_HEIGHT - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
+        x = (
+            random.randint(
+                0,
+                (GLOBAL_INFO.WIN_WIDTH - GLOBAL_INFO.BLOCK_SIZE)
+                // GLOBAL_INFO.BLOCK_SIZE,
+            )
+            * GLOBAL_INFO.BLOCK_SIZE
+        )
+        y = (
+            random.randint(
+                0,
+                (GLOBAL_INFO.WIN_HEIGHT - GLOBAL_INFO.BLOCK_SIZE)
+                // GLOBAL_INFO.BLOCK_SIZE,
+            )
+            * GLOBAL_INFO.BLOCK_SIZE
+        )
         self.food = Point(x, y)
         if self.food in self.snake:
             self._place_food()
@@ -102,53 +124,66 @@ class Snake:
 
         # 5. update ui and clock
         self._update_ui()
-        self.clock.tick(SPEED)
+        self.clock.tick(GLOBAL_INFO.SPEED)
         # 6. return game over and score
         return game_over, self.score
 
     def _update_ui(self):
-        self.display.fill(BLACK)
+        GLOBAL_INFO.WIN.fill(BLACK)
 
         for pt in self.snake:
             pygame.draw.rect(
-                self.display, BLUE1, pygame.Rect(pt.x, pt.y, BLOCK_SIZE, BLOCK_SIZE)
+                GLOBAL_INFO.WIN,
+                BLUE1,
+                pygame.Rect(pt.x, pt.y, GLOBAL_INFO.BLOCK_SIZE, GLOBAL_INFO.BLOCK_SIZE),
             )
             pygame.draw.rect(
-                self.display,
+                GLOBAL_INFO.WIN,
                 BLUE2,
-                pygame.Rect(pt.x + 4, pt.y + 4, BLOCK_SIZE - 8, BLOCK_SIZE - 8),
+                pygame.Rect(
+                    pt.x + 4,
+                    pt.y + 4,
+                    GLOBAL_INFO.BLOCK_SIZE - 8,
+                    GLOBAL_INFO.BLOCK_SIZE - 8,
+                ),
             )
 
         pygame.draw.rect(
-            self.display,
+            GLOBAL_INFO.WIN,
             RED,
-            pygame.Rect(self.food.x, self.food.y, BLOCK_SIZE, BLOCK_SIZE),
+            pygame.Rect(
+                self.food.x, self.food.y, GLOBAL_INFO.BLOCK_SIZE, GLOBAL_INFO.BLOCK_SIZE
+            ),
         )
 
         text = font.render("Score : " + str(self.score), True, WHITE)
-        self.display.blit(text, [0, 0])
+        GLOBAL_INFO.WIN.blit(text, [0, 0])
+        text = font.render("Gen : " + str(self.generation), True, WHITE)
+        GLOBAL_INFO.WIN.blit(text, [0, 25])
+        text = font.render("Individual : " + str(self.individual), True, WHITE)
+        GLOBAL_INFO.WIN.blit(text, [0, 50])
         pygame.display.flip()
 
     def _move(self, direction):
         x = self.head.x
         y = self.head.y
         if direction == Direction.RIGHT:
-            x += BLOCK_SIZE
+            x += GLOBAL_INFO.BLOCK_SIZE
         elif direction == Direction.LEFT:
-            x -= BLOCK_SIZE
+            x -= GLOBAL_INFO.BLOCK_SIZE
         elif direction == Direction.DOWN:
-            y += BLOCK_SIZE
+            y += GLOBAL_INFO.BLOCK_SIZE
         elif direction == Direction.UP:
-            y -= BLOCK_SIZE
+            y -= GLOBAL_INFO.BLOCK_SIZE
 
         self.head = Point(x, y)
 
     def _is_collide(self):
         # Solid Walls
         if (
-            self.head.x > WIN_WIDTH - BLOCK_SIZE
+            self.head.x > GLOBAL_INFO.WIN_WIDTH - GLOBAL_INFO.BLOCK_SIZE
             or self.head.x < 0
-            or self.head.y > WIN_HEIGHT - BLOCK_SIZE
+            or self.head.y > GLOBAL_INFO.WIN_HEIGHT - GLOBAL_INFO.BLOCK_SIZE
             or self.head.y < 0
         ):
             return True
@@ -160,12 +195,12 @@ class Snake:
 
     def get_inputs(self):
         # 1. Head (x/X, y/Y)
-        x_head = self.head.x / WIDTH
-        y_head = self.head.y / HEIGHT
+        x_head = self.head.x / GLOBAL_INFO.WIDTH
+        y_head = self.head.y / GLOBAL_INFO.HEIGHT
 
         # 2. Food (x/X, y/Y)
-        x_food = self.food.x / WIDTH
-        y_food = self.food.y / HEIGHT
+        x_food = self.food.x / GLOBAL_INFO.WIDTH
+        y_food = self.food.y / GLOBAL_INFO.HEIGHT
 
         # 3. Walls (left, right, straight)
 
@@ -178,10 +213,10 @@ class Snake:
 
         curr_direction = clockwise_direction.index(self.direction)
 
-        dist_wall_right = self.head.x / WIDTH
-        dist_wall_down = self.head.y / HEIGHT
-        dist_wall_left = 1 - (self.head.x / WIDTH)
-        dist_wall_up = 1 - (self.head.y / HEIGHT)
+        dist_wall_right = self.head.x / GLOBAL_INFO.WIDTH
+        dist_wall_down = self.head.y / GLOBAL_INFO.HEIGHT
+        dist_wall_left = 1 - (self.head.x / GLOBAL_INFO.WIDTH)
+        dist_wall_up = 1 - (self.head.y / GLOBAL_INFO.HEIGHT)
 
         clockwise_wall_distances = [
             dist_wall_right,
@@ -229,7 +264,7 @@ class Snake:
         left_body = clockwise_body_distances[(curr_direction - 1) % 4]
 
         # 5. Length (len/area)
-        length = len(self.snake) / (WIDTH * HEIGHT)
+        length = len(self.snake) / (GLOBAL_INFO.WIDTH * GLOBAL_INFO.HEIGHT)
 
         return (
             x_head,
