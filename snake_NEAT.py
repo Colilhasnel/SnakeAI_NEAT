@@ -14,9 +14,10 @@ class global_information:
     BLOCK_SIZE = 20
     WIDTH = 20
     HEIGHT = 20
-    SPEED = 90
+    SPEED = 120
     WIN_WIDTH = WIDTH * BLOCK_SIZE
     WIN_HEIGHT = HEIGHT * BLOCK_SIZE
+    MAX_LENGTH = 3
 
     WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     pygame.display.set_caption("Snake Game")
@@ -99,13 +100,13 @@ class Snake:
                 quit()
 
         if action == 0:
-            self.direction = Direction.LEFT
-        elif action == 1:
             self.direction = Direction.RIGHT
-        elif action == 2:
-            self.direction = Direction.UP
-        elif action == 3:
+        elif action == 1:
             self.direction = Direction.DOWN
+        elif action == 2:
+            self.direction = Direction.LEFT
+        elif action == 3:
+            self.direction = Direction.UP
 
         # 2. move
         self._move(self.direction)
@@ -180,13 +181,15 @@ class Snake:
 
         self.head = Point(x, y)
 
-    def _is_collide(self):
+    def _is_collide(self, pt=None):
         # Solid Walls
+        if pt == None:
+            pt = self.head
         if (
-            self.head.x > GLOBAL_INFO.WIN_WIDTH - GLOBAL_INFO.BLOCK_SIZE
-            or self.head.x < 0
-            or self.head.y > GLOBAL_INFO.WIN_HEIGHT - GLOBAL_INFO.BLOCK_SIZE
-            or self.head.y < 0
+            pt.x > GLOBAL_INFO.WIN_WIDTH - GLOBAL_INFO.BLOCK_SIZE
+            or pt.x < 0
+            or pt.y > GLOBAL_INFO.WIN_HEIGHT - GLOBAL_INFO.BLOCK_SIZE
+            or pt.y < 0
         ):
             return True
 
@@ -211,57 +214,18 @@ class Snake:
             Direction.UP,
         ]
 
+        clockwise_Points = [
+            Point(self.head.x + GLOBAL_INFO.BLOCK_SIZE, self.head.y),
+            Point(self.head.x, self.head.y + GLOBAL_INFO.BLOCK_SIZE),
+            Point(self.head.x - GLOBAL_INFO.BLOCK_SIZE, self.head.y),
+            Point(self.head.x, self.head.y - GLOBAL_INFO.BLOCK_SIZE),
+        ]
+
         curr_direction = clockwise_direction.index(self.direction)
 
-        dist_wall_right = self.head.x / GLOBAL_INFO.WIDTH
-        dist_wall_down = self.head.y / GLOBAL_INFO.HEIGHT
-        dist_wall_left = 1 - (self.head.x / GLOBAL_INFO.WIDTH)
-        dist_wall_up = 1 - (self.head.y / GLOBAL_INFO.HEIGHT)
-
-        clockwise_wall_distances = [
-            dist_wall_right,
-            dist_wall_down,
-            dist_wall_left,
-            dist_wall_up,
-        ]
-
-        straight_wall = clockwise_wall_distances[curr_direction]
-        right_wall = clockwise_wall_distances[(curr_direction + 1) % 4]
-        left_wall = clockwise_wall_distances[(curr_direction - 1) % 4]
-
-        # 4. Body on all sides
-        dist_body_right = 0
-        dist_body_left = 0
-        dist_body_up = 0
-        dist_body_down = 0
-
-        for pt in self.snake[1:]:
-            # for right side
-            if self.head.y == pt.y and self.head.x < pt.x:
-                dist_body_right = max(dist_body_right, self.head.x / pt.x)
-
-            # for left side
-            if self.head.y == pt.y and self.head.x > pt.x:
-                dist_body_left = max(dist_body_left, pt.x / self.head.x)
-
-            # for up side
-            if self.head.x == pt.x and self.head.y > pt.y:
-                dist_body_up = max(dist_body_up, pt.y / self.head.y)
-
-            # for down side
-            if self.head.x == pt.x and self.head.y < pt.y:
-                dist_body_down = max(dist_body_down, self.head.y / pt.y)
-
-        clockwise_body_distances = [
-            dist_body_right,
-            dist_body_down,
-            dist_body_left,
-            dist_body_up,
-        ]
-
-        straight_body = clockwise_body_distances[curr_direction]
-        right_body = clockwise_body_distances[(curr_direction + 1) % 4]
-        left_body = clockwise_body_distances[(curr_direction - 1) % 4]
+        danger_straigh = self._is_collide(clockwise_Points[curr_direction])
+        danger_right = self._is_collide(clockwise_Points[(curr_direction + 1) % 4])
+        danger_left = self._is_collide(clockwise_Points[(curr_direction - 1) % 4])
 
         # 5. One-Hot Encoded Direction of Snake
         dir_right = self.direction == Direction.RIGHT
@@ -274,12 +238,9 @@ class Snake:
             food_d,
             food_l,
             food_u,
-            left_wall,
-            straight_wall,
-            right_wall,
-            left_body,
-            straight_body,
-            right_body,
+            danger_right,
+            danger_straigh,
+            danger_left,
             dir_right,
             dir_down,
             dir_left,
@@ -289,12 +250,6 @@ class Snake:
 
 # Gene evaluation function for NEAT
 def eval_genome(genomes, config):
-    GLOBAL_INFO.GEN += 1
-
-    # list containing genomes and corresponding neural networks
-    genes = []
-    networks = []
-
     individual = 0
 
     for gene_id, gene in genomes:
@@ -302,8 +257,7 @@ def eval_genome(genomes, config):
         # Set initial fitness of all genes = 0, create neural networks and add then to the lists above
         gene.fitness = 0
         neural_net = neat.nn.FeedForwardNetwork.create(gene, config)
-        networks.append(neural_net)
-        genes.append(gene)
+        
         snake = Snake(GLOBAL_INFO.GEN, individual)
 
         run = True
@@ -312,9 +266,17 @@ def eval_genome(genomes, config):
             action = outputs.index(max(outputs))
             value = snake.play_step(action)
 
+            if len(snake.snake) > GLOBAL_INFO.MAX_LENGTH:
+                GLOBAL_INFO.SPEED = 40
+            else:
+                GLOBAL_INFO.SPEED = 120
+
             if value[0]:
                 run = False
                 gene.fitness = value[1] + (value[2] / 1000)
+
+        GLOBAL_INFO.MAX_LENGTH = max(GLOBAL_INFO.MAX_LENGTH, len(snake.snake))
+    GLOBAL_INFO.GEN += 1
 
 
 def run(config_file):
@@ -332,7 +294,7 @@ def run(config_file):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    winner = p.run(eval_genome, 50)
+    winner = p.run(eval_genome, 100)
 
     print("\nBest genome:\n{!s}".format(winner))
 
