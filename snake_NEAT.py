@@ -332,7 +332,13 @@ def eval_genome(genomes, config):
 
             if value[0]:
                 run = False
-                gene.fitness = value[1] + (value[2] / 1000)
+                apples = value[1]
+                steps = value[2]
+                gene.fitness = (
+                    steps
+                    + (2**apples + (apples**2.1) * 500)
+                    - ((apples**1.2) * ((0.25 * steps) ** 1.3))
+                )
 
         GLOBAL_INFO.AVG_LENGTH = (
             GLOBAL_INFO.AVG_LENGTH * GLOBAL_INFO.NO_SNAKES + len(snake.snake)
