@@ -1,9 +1,11 @@
 import pygame
+import math
 import neat
 import random
 import os
 from enum import Enum
 from collections import namedtuple
+
 
 pygame.init()
 font = pygame.font.Font("arial.ttf", 25)
@@ -12,17 +14,21 @@ font = pygame.font.Font("arial.ttf", 25)
 # Global Information class containing all variables
 class global_information:
     BLOCK_SIZE = 20
-    WIDTH = 20
-    HEIGHT = 20
+    WIDTH = 10
+    HEIGHT = 10
     SPEED = 120
     WIN_WIDTH = WIDTH * BLOCK_SIZE
     WIN_HEIGHT = HEIGHT * BLOCK_SIZE
-    MAX_LENGTH = 3
+    WIN_DIAGONAL = math.sqrt(WIN_WIDTH**2 + WIN_HEIGHT**2)
+    ROOT2 = math.sqrt(2)
+    DIAGONAL = math.sqrt(WIDTH**2 + HEIGHT**2)
 
     WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     pygame.display.set_caption("Snake Game")
 
     GEN = 0
+    NO_SNAKES = 0
+    AVG_LENGTH = 0
 
 
 # Instance of global_information to be used by all functions
@@ -198,15 +204,8 @@ class Snake:
 
         return False
 
-    def get_inputs(self):
-        # 1. Food Location(One-Hot Encoded)
-        food_r = self.food.x > self.head.x
-        food_d = self.food.y > self.head.y
-        food_l = self.food.x < self.head.x
-        food_u = self.food.y < self.head.y
-
-        # 3. Walls (left, right, straight)
-
+    def get_Vision(self):
+        # RIGHT TO UP (V4 Directions)
         clockwise_direction = [
             Direction.RIGHT,
             Direction.DOWN,
@@ -214,37 +213,97 @@ class Snake:
             Direction.UP,
         ]
 
-        clockwise_Points = [
-            Point(self.head.x + GLOBAL_INFO.BLOCK_SIZE, self.head.y),
-            Point(self.head.x, self.head.y + GLOBAL_INFO.BLOCK_SIZE),
-            Point(self.head.x - GLOBAL_INFO.BLOCK_SIZE, self.head.y),
-            Point(self.head.x, self.head.y - GLOBAL_INFO.BLOCK_SIZE),
+        curr_direction_4 = clockwise_direction.index(self.direction)
+
+        # V0 to V7 (V8 Directions)
+        get_look_clockwise = lambda pt1, pt0=self.head: [
+            ((pt0.x == pt1.x) and (pt1.y < pt0.y)),
+            (
+                ((pt0.y - pt1.y) == (pt1.x - pt0.x))
+                and (pt1.x > pt0.x)
+                and (pt1.y < pt0.y)
+            ),
+            ((pt1.y == pt0.y) and (pt1.x > pt0.x)),
+            (
+                ((pt1.x - pt0.x) == (pt1.y - pt0.y))
+                and (pt1.x > pt0.x)
+                and (pt1.y > pt0.y)
+            ),
+            ((pt1.x == pt0.x) and (pt1.y > pt0.y)),
+            (
+                ((pt0.y - pt1.y) == (pt1.x - pt0.x))
+                and (pt1.x < pt0.x)
+                and (pt1.y > pt0.y)
+            ),
+            ((pt1.y == pt0.y) and (pt1.x < pt0.x)),
+            (
+                ((pt1.x - pt0.x) == (pt1.y - pt0.y))
+                and (pt1.x < pt0.x)
+                and (pt1.y < pt0.y)
+            ),
         ]
 
-        curr_direction = clockwise_direction.index(self.direction)
+        # 1. Food Location (One-Hot Encoded) (V8 Look)
+        food_inputs = get_look_clockwise(self.food)
 
-        danger_straigh = self._is_collide(clockwise_Points[curr_direction])
-        danger_right = self._is_collide(clockwise_Points[(curr_direction + 1) % 4])
-        danger_left = self._is_collide(clockwise_Points[(curr_direction - 1) % 4])
+        # # conversion of V4 to V8
+        # curr_direction_8 = (2 * curr_direction_4 + 2) % 8
 
-        # 5. One-Hot Encoded Direction of Snake
-        dir_right = self.direction == Direction.RIGHT
-        dir_down = self.direction == Direction.DOWN
-        dir_left = self.direction == Direction.LEFT
-        dir_up = self.direction == Direction.UP
+        # food_inputs = (
+        #     clockwise_food[curr_direction_8:] + clockwise_food[:curr_direction_8]
+        # )
 
-        return (
-            food_r,
-            food_d,
-            food_l,
-            food_u,
-            danger_right,
-            danger_straigh,
-            danger_left,
-            dir_right,
-            dir_down,
-            dir_left,
-            dir_up,
+        # 2. Body Location (One-Hot Encoded) (V8 Look)
+
+        snake_body = [False] * 8
+
+        for pt in self.snake[1:]:
+            look = get_look_clockwise(pt)
+            snake_body = [snake_body[i] | look[i] for i in range(0, 8)]
+
+        # 3. Walls (Distances) (V8 Look)
+        walls = [
+            self.head.y / GLOBAL_INFO.WIN_HEIGHT,
+            min(self.head.y, GLOBAL_INFO.WIN_WIDTH - self.head.x)
+            * GLOBAL_INFO.ROOT2
+            / GLOBAL_INFO.WIN_DIAGONAL,
+            1 - (self.head.x / GLOBAL_INFO.WIN_WIDTH),
+            min(
+                GLOBAL_INFO.WIN_HEIGHT - self.head.y,
+                GLOBAL_INFO.WIN_WIDTH - self.head.x,
+            )
+            * GLOBAL_INFO.ROOT2
+            / GLOBAL_INFO.WIN_DIAGONAL,
+            1 - (self.head.y / GLOBAL_INFO.WIN_HEIGHT),
+            min(self.head.x, GLOBAL_INFO.WIN_HEIGHT - self.head.y)
+            * GLOBAL_INFO.ROOT2
+            / GLOBAL_INFO.WIN_DIAGONAL,
+            self.head.x / GLOBAL_INFO.WIN_WIDTH,
+            min(self.head.x, self.head.y)
+            * GLOBAL_INFO.ROOT2
+            / GLOBAL_INFO.WIN_DIAGONAL,
+        ]
+
+        # 4. One-Hot Encoded Direction of Snake (One-Hot Encoded) (V4 Directions)
+        snake_direction = [
+            self.direction == Direction.RIGHT,
+            self.direction == Direction.DOWN,
+            self.direction == Direction.LEFT,
+            self.direction == Direction.UP,
+        ]
+
+        # 5. Direction of Tail (One-Hot Encoded) (V4 Directions)
+        tail = self.snake[-1]
+        body = self.snake[-2]
+        tail_direction = [
+            (tail.y == body.y) and (tail.x < body.x),
+            (tail.x == body.x) and (tail.y < body.y),
+            (tail.y == body.y) and (tail.x > body.x),
+            (tail.x == body.x) and (tail.y > body.y),
+        ]
+
+        return tuple(
+            food_inputs + snake_body + walls + snake_direction + tail_direction
         )
 
 
@@ -257,16 +316,16 @@ def eval_genome(genomes, config):
         # Set initial fitness of all genes = 0, create neural networks and add then to the lists above
         gene.fitness = 0
         neural_net = neat.nn.FeedForwardNetwork.create(gene, config)
-        
+
         snake = Snake(GLOBAL_INFO.GEN, individual)
 
         run = True
         while run:
-            outputs = neural_net.activate(snake.get_inputs())
+            outputs = neural_net.activate(snake.get_Vision())
             action = outputs.index(max(outputs))
             value = snake.play_step(action)
 
-            if len(snake.snake) > GLOBAL_INFO.MAX_LENGTH:
+            if len(snake.snake) > GLOBAL_INFO.AVG_LENGTH:
                 GLOBAL_INFO.SPEED = 40
             else:
                 GLOBAL_INFO.SPEED = 120
@@ -275,7 +334,10 @@ def eval_genome(genomes, config):
                 run = False
                 gene.fitness = value[1] + (value[2] / 1000)
 
-        GLOBAL_INFO.MAX_LENGTH = max(GLOBAL_INFO.MAX_LENGTH, len(snake.snake))
+        GLOBAL_INFO.AVG_LENGTH = (
+            GLOBAL_INFO.AVG_LENGTH * GLOBAL_INFO.NO_SNAKES + len(snake.snake)
+        ) / (GLOBAL_INFO.NO_SNAKES + 1)
+        GLOBAL_INFO.NO_SNAKES += 1
     GLOBAL_INFO.GEN += 1
 
 
