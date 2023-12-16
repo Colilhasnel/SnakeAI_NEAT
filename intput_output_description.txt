@@ -1,11 +1,11 @@
 [INPUTS]
 # These inputs are one-hot encoded
-food_Inputs (V8 look)
-snake_body (V8 look)
+food_Inputs (V8 look) - (Respective to Snake)
+snake_body (V8 look) - (Respective to Snake)
 snake_direction (V4 Direction)
 tail_direction (V4 Direction)
 # These inputs are fractions
-walls (V8 look)
+walls (V8 look) - (Respective to Snake)
 
 [OUTPUTS]
 4 Output Nodes (Right, Down, Left, Up)

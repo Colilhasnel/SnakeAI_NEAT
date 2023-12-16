@@ -244,25 +244,32 @@ class Snake:
         ]
 
         # 1. Food Location (One-Hot Encoded) (V8 Look)
-        food_inputs = get_look_clockwise(self.food)
+        clockwise_food = get_look_clockwise(self.food)
 
         # # conversion of V4 to V8
-        # curr_direction_8 = (2 * curr_direction_4 + 2) % 8
+        curr_direction_8 = (2 * curr_direction_4 + 2) % 8
 
-        # food_inputs = (
-        #     clockwise_food[curr_direction_8:] + clockwise_food[:curr_direction_8]
-        # )
+        food_inputs = (
+            clockwise_food[curr_direction_8:] + clockwise_food[:curr_direction_8]
+        )
 
         # 2. Body Location (One-Hot Encoded) (V8 Look)
 
-        snake_body = [False] * 8
+        snake_body_clockwise = [False] * 8
 
         for pt in self.snake[1:]:
             look = get_look_clockwise(pt)
-            snake_body = [snake_body[i] | look[i] for i in range(0, 8)]
+            snake_body_clockwise = [
+                snake_body_clockwise[i] | look[i] for i in range(0, 8)
+            ]
+
+        snake_body_inputs = (
+            snake_body_clockwise[curr_direction_8:]
+            + snake_body_clockwise[:curr_direction_8]
+        )
 
         # 3. Walls (Distances) (V8 Look)
-        walls = [
+        walls_clockwise = [
             self.head.y / GLOBAL_INFO.WIN_HEIGHT,
             min(self.head.y, GLOBAL_INFO.WIN_WIDTH - self.head.x)
             * GLOBAL_INFO.ROOT2
@@ -284,6 +291,10 @@ class Snake:
             / GLOBAL_INFO.WIN_DIAGONAL,
         ]
 
+        wall_inputs = (
+            walls_clockwise[curr_direction_8:] + walls_clockwise[:curr_direction_8]
+        )
+
         # 4. One-Hot Encoded Direction of Snake (One-Hot Encoded) (V4 Directions)
         snake_direction = [
             self.direction == Direction.RIGHT,
@@ -303,7 +314,11 @@ class Snake:
         ]
 
         return tuple(
-            food_inputs + snake_body + walls + snake_direction + tail_direction
+            food_inputs
+            + snake_body_inputs
+            + wall_inputs
+            + snake_direction
+            + tail_direction
         )
 
 
@@ -362,7 +377,7 @@ def run(config_file):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    winner = p.run(eval_genome, 100)
+    winner = p.run(eval_genome, 1000)
 
     print("\nBest genome:\n{!s}".format(winner))
 
