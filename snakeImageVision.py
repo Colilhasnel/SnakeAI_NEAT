@@ -14,8 +14,8 @@ font = pygame.font.Font("arial.ttf", 25)
 # Global Information class containing all variables
 class global_information:
     BLOCK_SIZE = 16
-    WIDTH = 256
-    HEIGHT = 256
+    WIDTH = 32
+    HEIGHT = 32
     SPEED = 60
     WIN_WIDTH = WIDTH * BLOCK_SIZE
     WIN_HEIGHT = HEIGHT * BLOCK_SIZE
@@ -167,6 +167,8 @@ class Snake:
         self.display.blit(text, [0, 0])
         pygame.display.flip()
 
+        pygame.image.save(self.display, "ImageVision.jpg")
+
     def _move(self, direction):
         x = self.head.x
         y = self.head.y
@@ -197,73 +199,3 @@ class Snake:
             return True
 
         return False
-
-    def get_Vision(self):
-        None
-        # generate_image
-
-
-# # Gene evaluation function for NEAT
-# def eval_genome(genomes, config):
-#     individual = 0
-
-#     for gene_id, gene in genomes:
-#         individual += 1
-#         # Set initial fitness of all genes = 0, create neural networks and add then to the lists above
-#         gene.fitness = 0
-#         neural_net = neat.nn.FeedForwardNetwork.create(gene, config)
-
-#         snake = Snake(GLOBAL_INFO.GEN, individual)
-
-#         run = True
-#         while run:
-#             outputs = neural_net.activate(snake.get_Vision())
-#             action = outputs.index(max(outputs))
-#             value = snake.play_step(action)
-
-#             if len(snake.snake) > GLOBAL_INFO.AVG_LENGTH:
-#                 GLOBAL_INFO.SPEED = 40
-#             else:
-#                 GLOBAL_INFO.SPEED = 120
-
-#             if value[0]:
-#                 run = False
-#                 apples = value[1]
-#                 steps = value[2]
-#                 gene.fitness = (
-#                     steps
-#                     + (2**apples + (apples**2.1) * 500)
-#                     - ((apples**1.2) * ((0.25 * steps) ** 1.3))
-#                 )
-
-#         GLOBAL_INFO.AVG_LENGTH = (
-#             GLOBAL_INFO.AVG_LENGTH * GLOBAL_INFO.NO_SNAKES + len(snake.snake)
-#         ) / (GLOBAL_INFO.NO_SNAKES + 1)
-#         GLOBAL_INFO.NO_SNAKES += 1
-#     GLOBAL_INFO.GEN += 1
-
-
-# def run(config_file):
-#     config = neat.Config(
-#         neat.DefaultGenome,
-#         neat.DefaultReproduction,
-#         neat.DefaultSpeciesSet,
-#         neat.DefaultStagnation,
-#         config_file,
-#     )
-
-#     p = neat.Population(config)
-
-#     p.add_reporter(neat.StdOutReporter(True))
-#     stats = neat.StatisticsReporter()
-#     p.add_reporter(stats)
-
-#     winner = p.run(eval_genome, 100)
-
-#     print("\nBest genome:\n{!s}".format(winner))
-
-
-# if __name__ == "__main__":
-#     local_dir = os.path.dirname(__file__)
-#     config_path = os.path.join(local_dir, "config_file.txt")
-#     run(config_path)
