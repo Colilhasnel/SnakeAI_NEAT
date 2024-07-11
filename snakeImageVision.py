@@ -117,23 +117,27 @@ class Snake:
         self.snake.insert(0, self.head)
 
         # 3. check if gameover
+        reward = 0
         game_over = False
         if self._is_collide() or self.frame_iteration > 50 * len(self.snake):
             game_over = True
+            reward = -10
             return game_over, self.score, self.frame_iteration
 
         # 4. place new food or just move
         if self.head == self.food:
             self.score += 1
+            reward = 10
             self._place_food()
         else:
+            reward = -1
             self.snake.pop()
 
         # 5. update ui and clock
         self._update_ui()
         self.clock.tick(GLOBAL_INFO.SPEED)
         # 6. return game over and score
-        return game_over, self.score, self.frame_iteration
+        return reward, game_over, self.score
 
     def _update_ui(self):
         self.display.fill(BLACK)
