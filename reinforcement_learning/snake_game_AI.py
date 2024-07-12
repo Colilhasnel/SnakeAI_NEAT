@@ -5,7 +5,7 @@ from collections import namedtuple
 import numpy as np
 
 pygame.init()
-font = pygame.font.Font('arial.ttf', 25)
+font = pygame.font.Font("arial.ttf", 25)
 
 # reset
 # reward
@@ -21,7 +21,7 @@ class Direction(Enum):
     DOWN = 4
 
 
-Point = namedtuple('Point', 'x, y')
+Point = namedtuple("Point", "x, y")
 
 # rgb colors
 WHITE = (255, 255, 255)
@@ -40,7 +40,7 @@ class SnakeGameAI:
         self.h = h
 
         self.display = pygame.display.set_mode((self.w, self.h))
-        pygame.display.set_caption('Snake Game')
+        pygame.display.set_caption("Snake Game")
 
         self.clock = pygame.time.Clock()
 
@@ -49,10 +49,12 @@ class SnakeGameAI:
 
     def reset(self):
 
-        self.head = Point(self.w/2, self.h/2)
-        self.snake = [self.head,
-                      Point(self.head.x - BLOCK_SIZE, self.head.y),
-                      Point(self.head.x - 2*BLOCK_SIZE, self.head.y)]
+        self.head = Point(self.w / 2, self.h / 2)
+        self.snake = [
+            self.head,
+            Point(self.head.x - BLOCK_SIZE, self.head.y),
+            Point(self.head.x - 2 * BLOCK_SIZE, self.head.y),
+        ]
 
         self.score = 0
         self.food = None
@@ -61,10 +63,8 @@ class SnakeGameAI:
         self._place_food()
 
     def _place_food(self):
-        x = random.randint(0, (self.w-BLOCK_SIZE) //
-                           BLOCK_SIZE)*BLOCK_SIZE
-        y = random.randint(0, (self.h - BLOCK_SIZE) //
-                           BLOCK_SIZE)*BLOCK_SIZE
+        x = random.randint(0, (self.w - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
+        y = random.randint(0, (self.h - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
         self.food = Point(x, y)
         if self.food in self.snake:
             self._place_food()
@@ -86,7 +86,7 @@ class SnakeGameAI:
         # 3. check if gameover
         reward = 0
         game_over = False
-        if self.is_collision() or self.frame_iteration > 50*len(self.snake):
+        if self.is_collision() or self.frame_iteration > 50 * len(self.snake):
             game_over = True
             reward = -10
             return reward, game_over, self.score
@@ -110,13 +110,20 @@ class SnakeGameAI:
         self.display.fill(BLACK)
 
         for pt in self.snake:
-            pygame.draw.rect(self.display, BLUE1, pygame.Rect(
-                pt.x, pt.y, BLOCK_SIZE, BLOCK_SIZE))
-            pygame.draw.rect(self.display, BLUE2, pygame.Rect(
-                pt.x+4, pt.y+4, BLOCK_SIZE-8, BLOCK_SIZE-8))
+            pygame.draw.rect(
+                self.display, BLUE1, pygame.Rect(pt.x, pt.y, BLOCK_SIZE, BLOCK_SIZE)
+            )
+            pygame.draw.rect(
+                self.display,
+                BLUE2,
+                pygame.Rect(pt.x + 4, pt.y + 4, BLOCK_SIZE - 8, BLOCK_SIZE - 8),
+            )
 
-        pygame.draw.rect(self.display, RED, pygame.Rect(
-            self.food.x, self.food.y, BLOCK_SIZE, BLOCK_SIZE))
+        pygame.draw.rect(
+            self.display,
+            RED,
+            pygame.Rect(self.food.x, self.food.y, BLOCK_SIZE, BLOCK_SIZE),
+        )
 
         text = font.render("Score : " + str(self.score), True, WHITE)
         self.display.blit(text, [0, 0])
@@ -124,17 +131,16 @@ class SnakeGameAI:
 
     def _move(self, action):
 
-        clockwise = [Direction.RIGHT, Direction.DOWN,
-                     Direction.LEFT, Direction.UP]
+        clockwise = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP]
         idx = clockwise.index(self.direction)
 
         if np.array_equal(action, [1, 0, 0]):
             new_dir = clockwise[idx]
         elif np.array_equal(action, [0, 1, 0]):
-            next_idx = (idx+1) % 4
+            next_idx = (idx + 1) % 4
             new_dir = clockwise[next_idx]
         else:
-            next_idx = (idx-1) % 4
+            next_idx = (idx - 1) % 4
             new_dir = clockwise[next_idx]
 
         self.direction = new_dir
@@ -167,29 +173,38 @@ class SnakeGameAI:
         if pt is None:
             pt = self.head
         # Solid Walls
-        if pt.x > self.w - BLOCK_SIZE or pt.x < 0 or pt.y > self.h - BLOCK_SIZE or pt.y < 0:
+        if (
+            pt.x > self.w - BLOCK_SIZE
+            or pt.x < 0
+            or pt.y > self.h - BLOCK_SIZE
+            or pt.y < 0
+        ):
             return True
 
         if pt in self.snake[1:]:
             return True
 
         return False
-    
+
     def is_wall(self, pt=None):
         if pt is None:
             pt = self.head
 
-        if pt.x > self.w - BLOCK_SIZE or pt.x < 0  or pt.y > self.h-BLOCK_SIZE or pt.y<0:
+        if (
+            pt.x > self.w - BLOCK_SIZE
+            or pt.x < 0
+            or pt.y > self.h - BLOCK_SIZE
+            or pt.y < 0
+        ):
             return True
-        
+
         return False
-    
+
     def is_body(self, pt=None):
         if pt is None:
             pt = self.head
 
         if pt in self.snake[1:]:
             return True
-        
-        return False
 
+        return False

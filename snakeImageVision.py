@@ -73,6 +73,8 @@ class Snake:
 
         self._place_food()
 
+        self._update_ui()
+
     def _place_food(self):
         x = (
             random.randint(
@@ -102,15 +104,6 @@ class Snake:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-
-        if action == 0:
-            self.direction = Direction.RIGHT
-        elif action == 1:
-            self.direction = Direction.DOWN
-        elif action == 2:
-            self.direction = Direction.LEFT
-        elif action == 3:
-            self.direction = Direction.UP
 
         # 2. move
         self._move(self.direction)
@@ -173,16 +166,31 @@ class Snake:
 
         pygame.image.save(self.display, "ImageVision.jpg")
 
-    def _move(self, direction):
+    def _move(self, action):
+
+        clockwise = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP]
+        idx = clockwise.index(self.direction)
+
+        if np.array_equal(action, [1, 0, 0]):
+            new_dir = clockwise[idx]
+        elif np.array_equal(action, [0, 1, 0]):
+            next_idx = (idx + 1) % 4
+            new_dir = clockwise[next_idx]
+        else:
+            next_idx = (idx - 1) % 4
+            new_dir = clockwise[next_idx]
+
+        self.direction = new_dir
+
         x = self.head.x
         y = self.head.y
-        if direction == Direction.RIGHT:
+        if self.direction == Direction.RIGHT:
             x += GLOBAL_INFO.BLOCK_SIZE
-        elif direction == Direction.LEFT:
+        elif self.direction == Direction.LEFT:
             x -= GLOBAL_INFO.BLOCK_SIZE
-        elif direction == Direction.DOWN:
+        elif self.direction == Direction.DOWN:
             y += GLOBAL_INFO.BLOCK_SIZE
-        elif direction == Direction.UP:
+        elif self.direction == Direction.UP:
             y -= GLOBAL_INFO.BLOCK_SIZE
 
         self.head = Point(x, y)
