@@ -115,7 +115,7 @@ class Snake:
         if self._is_collide() or self.frame_iteration > 50 * len(self.snake):
             game_over = True
             reward = -10
-            return game_over, self.score, self.frame_iteration
+            return reward, game_over, self.score
 
         # 4. place new food or just move
         if self.head == self.food:
