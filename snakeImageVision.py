@@ -106,7 +106,7 @@ class Snake:
                 quit()
 
         # 2. move
-        self._move(self.direction)
+        self._move(action)
         self.snake.insert(0, self.head)
 
         # 3. check if gameover
@@ -120,7 +120,7 @@ class Snake:
         # 4. place new food or just move
         if self.head == self.food:
             self.score += 1
-            reward = 10
+            reward = 20
             self._place_food()
         else:
             reward = -1
