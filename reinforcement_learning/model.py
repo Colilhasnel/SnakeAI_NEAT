@@ -21,8 +21,8 @@ class Linear_QNet(nn.Module):
 
         return x
 
-    def save(self, file_name='model.pth'):
-        model_folder_path = './model'
+    def save(self, file_name="model.pth"):
+        model_folder_path = "./model"
         if not os.path.exists(model_folder_path):
             os.makedirs(model_folder_path)
 
@@ -47,13 +47,13 @@ class QTrainer:
         reward = torch.tensor(reward, dtype=torch.float)
         # (n,x) already if it's a batch
 
-        if (len(state.shape) == 1):
+        if len(state.shape) == 1:
             # (1,x)
             state = torch.unsqueeze(state, 0)
             next_state = torch.unsqueeze(next_state, 0)
             action = torch.unsqueeze(action, 0)
             reward = torch.unsqueeze(reward, 0)
-            done = (done, )
+            done = (done,)
 
         # 1: precited Q value with current state
         pred = self.model(state)
@@ -64,7 +64,7 @@ class QTrainer:
             if not done[idx]:
                 Q_new += self.gamma * torch.max(self.model(next_state[idx]))
 
-            target[idx][torch.argmax(action).item()] = Q_new 
+            target[idx][torch.argmax(action).item()] = Q_new
 
         # 2: Q_new = r + y*max(next_predicted Q_value)
         self.optimizer.zero_grad()
@@ -72,4 +72,3 @@ class QTrainer:
         loss.backward()
 
         self.optimizer.step()
-

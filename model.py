@@ -86,33 +86,58 @@ class QTrainer:
 
     def train_step(self, state, action, reward, next_state, done):
         state = torch.tensor(state, dtype=torch.float)
-        state = state.view(1, state.shape[0], state.shape[1])
 
         next_state = torch.tensor(next_state, dtype=torch.float)
-        next_state = next_state.view(1, next_state.shape[0], next_state.shape[1])
 
         action = torch.tensor(action, dtype=torch.long)
         reward = torch.tensor(reward, dtype=torch.float)
 
         if len(state.shape) == 3:
-            state = torch.unsqueeze(state, 0)
-            next_state = torch.unsqueeze(next_state, 0)
-            action = torch.unsqueeze(action, 0)
-            reward = torch.unsqueeze(reward, 0)
-            done = (done,)
+            # state = torch.unsqueeze(state, 0)
+            # next_state = torch.unsqueeze(next_state, 0)
+            # action = torch.unsqueeze(action, 0)
+            # reward = torch.unsqueeze(reward, 0)
+            # done = (done,)
+            predicted = self.model(state)
 
-        predicted = self.model(state)
-        predicted = predicted.view(1, -1)
+            target = predicted.clone()
 
-        target = predicted.clone()
+            Q_new = reward
 
-        for idx in range(len(done)):
-            Q_new = reward[idx]
+            if not done:
+                Q_new += self.gamma * torch.max(self.model(next_state))
 
-            if not done[idx]:
-                Q_new += self.gamma * torch.max(self.model(next_state[idx]))
+            target[torch.argmax(action).item()] = Q_new
 
-            target[idx][torch.argmax(action).item()] = Q_new
+        else:
+
+            predicted = torch.zeros(len(done), 3)
+            target = predicted.clone()
+
+            for idx in range(len(done)):
+                predicted[idx] = self.model(state[idx])
+
+                target[idx] = predicted[idx].clone()
+
+                Q_new = reward[idx]
+
+                if not done[idx]:
+                    Q_new += self.gamma * torch.max(self.model(next_state[idx]))
+
+                target[idx][torch.argmax(action).item()] = Q_new
+
+        # predicted = self.model(state)
+        # predicted = predicted.view(-1, 3)
+
+        # target = predicted.clone()
+
+        # for idx in range(len(done)):
+        #     Q_new = reward[idx]
+
+        #     if not done[idx]:
+        #         Q_new += self.gamma * torch.max(self.model(next_state[idx]))
+
+        #     target[idx][torch.argmax(action).item()] = Q_new
 
         self.optimizer.zero_grad()
         loss = self.criterion(target, predicted)
@@ -140,7 +165,8 @@ class Agent:
         image = cv2.imread("ImageVision.jpg", cv2.IMREAD_GRAYSCALE)
         image = cv2.resize(image, (64, 64))
         ret, bin_image = cv2.threshold(image, 10, 255, cv2.THRESH_BINARY)
-        return np.array(bin_image, dtype=int)
+        bin_image = bin_image.reshape((1, bin_image.shape[0], bin_image.shape[1]))
+        return bin_image
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -159,7 +185,7 @@ class Agent:
         self.trainer.train_step(state, action, reward, next_state, done)
 
     def get_action(self, state):
-        self.epsilon = 80 - self.n_games
+        self.epsilon = 190 - self.n_games
         final_move = [0, 0, 0]
 
         if random.randint(0, 200) < self.epsilon:
@@ -167,7 +193,6 @@ class Agent:
             final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float)
-            state0 = state0.view(1, state.shape[0], state.shape[1])
             prediction = self.model(state0)
             move = torch.argmax(prediction).item()
 
