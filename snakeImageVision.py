@@ -13,9 +13,9 @@ font = pygame.font.Font("arial.ttf", 25)
 
 # Global Information class containing all variables
 class global_information:
-    BLOCK_SIZE = 16
-    WIDTH = 32
-    HEIGHT = 32
+    BLOCK_SIZE = 30
+    WIDTH = 12
+    HEIGHT = 12
     SPEED = 150
     WIN_WIDTH = WIDTH * BLOCK_SIZE
     WIN_HEIGHT = HEIGHT * BLOCK_SIZE
@@ -126,8 +126,7 @@ class Snake:
             x_dist = (self.food.x - self.head.x) // 16
             y_dist = (self.food.y - self.head.y) // 16
             reward = math.sqrt(x_dist**2 + y_dist**2) / int(GLOBAL_INFO.DIAGONAL)
-            reward = math.exp(-2 * reward)
-            reward = reward / 100
+            reward = -reward
             self.snake.pop()
 
         # 5. update ui and clock
@@ -164,8 +163,8 @@ class Snake:
             ),
         )
 
-        text = font.render("Score : " + str(self.score), True, WHITE)
-        self.display.blit(text, [0, 0])
+        # text = font.render("Score : " + str(self.score), True, WHITE)
+        # self.display.blit(text, [0, 0])
         pygame.display.flip()
 
         pygame.image.save(self.display, "ImageVision.jpg")

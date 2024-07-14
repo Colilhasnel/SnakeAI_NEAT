@@ -4,13 +4,13 @@ import cv2
 import os
 import torch
 from torch import nn
-import pandas as pd
 import torch.optim as optim
 from collections import deque
 import random
+import matplotlib.pyplot as plt
+from IPython import display
 
 losses = []
-rewards = []
 
 
 class CQN(nn.Module):
@@ -65,6 +65,8 @@ class QTrainer:
         self.gamma = gamma
         self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
         self.criterion = nn.MSELoss()
+        self.current_loss = 0
+        self.moves = 1
 
     def train_step(self, state, action, reward, next_state, done):
         state = torch.tensor(state, dtype=torch.float)
@@ -80,33 +82,6 @@ class QTrainer:
             action = torch.unsqueeze(action, 0)
             reward = torch.unsqueeze(reward, 0)
             done = (done,)
-        #     predicted = self.model(state)
-
-        #     target = predicted.clone()
-
-        #     Q_new = reward
-
-        #     if not done:
-        #         Q_new += self.gamma * torch.max(self.model(next_state))
-
-        #     target[torch.argmax(action).item()] = Q_new
-
-        # else:
-
-        #     predicted = torch.zeros(len(done), 3)
-        #     target = predicted.clone()
-
-        #     for idx in range(len(done)):
-        #         predicted[idx] = self.model(state[idx])
-
-        #         target[idx] = predicted[idx].clone()
-
-        #         Q_new = reward[idx]
-
-        #         if not done[idx]:
-        #             Q_new += self.gamma * torch.max(self.model(next_state[idx]))
-
-        #         target[idx][torch.argmax(action).item()] = Q_new
 
         predicted = self.model(state)
 
@@ -123,7 +98,15 @@ class QTrainer:
         self.optimizer.zero_grad()
         loss = self.criterion(target, predicted)
 
-        losses.append(loss.item())
+        if len(done) > 1:
+            self.current_loss = self.current_loss / self.moves
+            losses.append(self.current_loss)
+            self.current_loss = 0
+            self.moves = 1
+
+        else:
+            self.current_loss += loss.item()
+            self.moves += 1
 
         loss.backward()
 
@@ -132,7 +115,7 @@ class QTrainer:
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 300
-LR = 0.001
+LR = 0.01
 
 
 class Agent:
@@ -168,7 +151,7 @@ class Agent:
         self.trainer.train_step(state, action, reward, next_state, done)
 
     def get_action(self, state):
-        self.epsilon = 80 - self.n_games
+        self.epsilon = 300 - self.n_games
         final_move = [0, 0, 0]
 
         if random.randint(0, 200) < self.epsilon:
@@ -187,7 +170,14 @@ class Agent:
 def train():
     record = 0
 
-    total_rewards = 0
+    plt.ion()
+
+    display.clear_output(wait=True)
+    display.display(plt.gcf())
+    plt.clf()
+    plt.title("Training")
+    plt.xlabel("Number of Games")
+    plt.ylabel("Loss")
 
     agent = Agent()
 
@@ -200,8 +190,6 @@ def train():
 
         reward, done, score = game.play_step(final_move)
 
-        total_rewards += reward
-
         state_new = agent.get_state()
 
         agent.train_short_memory(state_old, final_move, reward, state_new, done)
@@ -213,18 +201,15 @@ def train():
             agent.n_games += 1
             agent.train_long_memory()
 
-            rewards.append(total_rewards)
-            total_rewards = 0
-
             if score > record:
                 record = score
                 agent.model.save()
 
+            plt.plot(losses)
+
+            plt.pause(0.1)
+
             print("Game", agent.n_games, "Score", score, "Record", record)
-
-
-def plot():
-    None
 
 
 if __name__ == "__main__":
