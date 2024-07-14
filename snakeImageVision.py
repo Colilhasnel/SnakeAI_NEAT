@@ -16,7 +16,7 @@ class global_information:
     BLOCK_SIZE = 16
     WIDTH = 32
     HEIGHT = 32
-    SPEED = 60
+    SPEED = 150
     WIN_WIDTH = WIDTH * BLOCK_SIZE
     WIN_HEIGHT = HEIGHT * BLOCK_SIZE
     WIN_DIAGONAL = math.sqrt(WIN_WIDTH**2 + WIN_HEIGHT**2)
@@ -120,10 +120,14 @@ class Snake:
         # 4. place new food or just move
         if self.head == self.food:
             self.score += 1
-            reward = 20
+            reward = 10
             self._place_food()
         else:
-            reward = -1
+            x_dist = (self.food.x - self.head.x) // 16
+            y_dist = (self.food.y - self.head.y) // 16
+            reward = math.sqrt(x_dist**2 + y_dist**2) / int(GLOBAL_INFO.DIAGONAL)
+            reward = math.exp(-2 * reward)
+            reward = reward / 100
             self.snake.pop()
 
         # 5. update ui and clock

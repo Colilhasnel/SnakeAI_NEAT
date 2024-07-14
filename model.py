@@ -9,62 +9,44 @@ import torch.optim as optim
 from collections import deque
 import random
 
-
-# game = Snake()
-
-# example = [0, 0, 0, 0, 1]
-
-
-# for i in example:
-#     game.play_step(i)
-
-# image = cv2.imread("ImageVision.jpg", cv2.IMREAD_GRAYSCALE)
-# image = cv2.resize(image, (64, 64))
-
-# cv2.imwrite("grayscale.jpeg", image)
-
-# ret, thresh1 = cv2.threshold(image, 10, 255, cv2.THRESH_BINARY)
-
-# image_csv = pd.DataFrame(thresh1)
-
-# image_csv.to_csv("Image6464")
-
-# cv2.imwrite("binary_image.jpeg", thresh1)
-
-# image_tensor = torch.tensor(thresh1)
-
-# print(image_tensor)
-
-# print(image_tensor.shape)
+losses = []
+rewards = []
 
 
 class CQN(nn.Module):
     def __init__(self):
         super().__init__()
         self.convulutions = nn.Sequential(
-            nn.Conv2d(1, 16, padding="same", kernel_size=3),  # Out = 64*64*16
+            # Input = 1*128*128 (Channel, Height, Width)
+            nn.Conv2d(
+                in_channels=1, out_channels=32, kernel_size=8, stride=4
+            ),  # Out = 32*31*31
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),  # Out = 16*32*32
-            nn.Conv2d(16, 16, padding="same", kernel_size=3),  # Out = 32*32*16
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Out = 32*15*15
+            nn.Conv2d(
+                in_channels=32, out_channels=64, kernel_size=4, stride=2
+            ),  # Out = 64*6*6
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),  # Out = 16*16*16
-            nn.Conv2d(16, 8, padding="same", kernel_size=3),  # Out = 16*16*8
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Out = 64*3*3
+            nn.Conv2d(
+                in_channels=64, out_channels=128, kernel_size=3, stride=2
+            ),  # Out = 128*1*1
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),  # Out = 8*8*8
-            nn.Flatten(0, -1),  # 512
+            nn.Flatten(),  # Out = 128*1
         )
         self.RL = nn.Sequential(
-            nn.Linear(512, 100),  # 100
+            nn.Linear(128, 512),  # 512
             nn.ReLU(),
-            nn.Linear(100, 100),
+            nn.Linear(512, 512),  # 512
             nn.ReLU(),
-            nn.Linear(100, 3),
+            nn.Linear(512, 3),  # 3
         )
 
     def forward(self, x):
-        # x is a 64*64 image
-        x = self.convulutions(x)
-        x = self.RL(x)
+        # x is a 128*128 image
+        x = self.convulutions(x)  # Out = 128*1
+        x = x.view(-1, 128)  # Out = 1*128
+        x = self.RL(x)  # = 1*3
         return x
 
     def save(self, file_name="model.pth"):
@@ -93,54 +75,55 @@ class QTrainer:
         reward = torch.tensor(reward, dtype=torch.float)
 
         if len(state.shape) == 3:
-            # state = torch.unsqueeze(state, 0)
-            # next_state = torch.unsqueeze(next_state, 0)
-            # action = torch.unsqueeze(action, 0)
-            # reward = torch.unsqueeze(reward, 0)
-            # done = (done,)
-            predicted = self.model(state)
+            state = torch.unsqueeze(state, 0)
+            next_state = torch.unsqueeze(next_state, 0)
+            action = torch.unsqueeze(action, 0)
+            reward = torch.unsqueeze(reward, 0)
+            done = (done,)
+        #     predicted = self.model(state)
 
-            target = predicted.clone()
+        #     target = predicted.clone()
 
-            Q_new = reward
+        #     Q_new = reward
 
-            if not done:
-                Q_new += self.gamma * torch.max(self.model(next_state))
+        #     if not done:
+        #         Q_new += self.gamma * torch.max(self.model(next_state))
 
-            target[torch.argmax(action).item()] = Q_new
+        #     target[torch.argmax(action).item()] = Q_new
 
-        else:
+        # else:
 
-            predicted = torch.zeros(len(done), 3)
-            target = predicted.clone()
+        #     predicted = torch.zeros(len(done), 3)
+        #     target = predicted.clone()
 
-            for idx in range(len(done)):
-                predicted[idx] = self.model(state[idx])
+        #     for idx in range(len(done)):
+        #         predicted[idx] = self.model(state[idx])
 
-                target[idx] = predicted[idx].clone()
+        #         target[idx] = predicted[idx].clone()
 
-                Q_new = reward[idx]
+        #         Q_new = reward[idx]
 
-                if not done[idx]:
-                    Q_new += self.gamma * torch.max(self.model(next_state[idx]))
+        #         if not done[idx]:
+        #             Q_new += self.gamma * torch.max(self.model(next_state[idx]))
 
-                target[idx][torch.argmax(action).item()] = Q_new
+        #         target[idx][torch.argmax(action).item()] = Q_new
 
-        # predicted = self.model(state)
-        # predicted = predicted.view(-1, 3)
+        predicted = self.model(state)
 
-        # target = predicted.clone()
+        target = predicted.clone()
 
-        # for idx in range(len(done)):
-        #     Q_new = reward[idx]
+        for idx in range(len(done)):
+            Q_new = reward[idx]
 
-        #     if not done[idx]:
-        #         Q_new += self.gamma * torch.max(self.model(next_state[idx]))
+            if not done[idx]:
+                Q_new += self.gamma * torch.max(self.model(next_state[idx]))
 
-        #     target[idx][torch.argmax(action).item()] = Q_new
+            target[idx][torch.argmax(action).item()] = Q_new
 
         self.optimizer.zero_grad()
         loss = self.criterion(target, predicted)
+
+        losses.append(loss.item())
 
         loss.backward()
 
@@ -148,7 +131,7 @@ class QTrainer:
 
 
 MAX_MEMORY = 100_000
-BATCH_SIZE = 1000
+BATCH_SIZE = 300
 LR = 0.001
 
 
@@ -163,7 +146,7 @@ class Agent:
 
     def get_state(self):
         image = cv2.imread("ImageVision.jpg", cv2.IMREAD_GRAYSCALE)
-        image = cv2.resize(image, (64, 64))
+        image = cv2.resize(image, (128, 128))
         ret, bin_image = cv2.threshold(image, 10, 255, cv2.THRESH_BINARY)
         bin_image = bin_image.reshape((1, bin_image.shape[0], bin_image.shape[1]))
         return bin_image
@@ -185,7 +168,7 @@ class Agent:
         self.trainer.train_step(state, action, reward, next_state, done)
 
     def get_action(self, state):
-        self.epsilon = 190 - self.n_games
+        self.epsilon = 80 - self.n_games
         final_move = [0, 0, 0]
 
         if random.randint(0, 200) < self.epsilon:
@@ -204,6 +187,8 @@ class Agent:
 def train():
     record = 0
 
+    total_rewards = 0
+
     agent = Agent()
 
     game = Snake()
@@ -214,6 +199,8 @@ def train():
         final_move = agent.get_action(state_old)
 
         reward, done, score = game.play_step(final_move)
+
+        total_rewards += reward
 
         state_new = agent.get_state()
 
@@ -226,11 +213,18 @@ def train():
             agent.n_games += 1
             agent.train_long_memory()
 
+            rewards.append(total_rewards)
+            total_rewards = 0
+
             if score > record:
                 record = score
                 agent.model.save()
 
             print("Game", agent.n_games, "Score", score, "Record", record)
+
+
+def plot():
+    None
 
 
 if __name__ == "__main__":
