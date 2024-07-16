@@ -74,6 +74,9 @@ class Snake:
         self._place_food()
 
         self._update_ui()
+        pygame.image.save(self.display, "ImageVision2.jpg")
+        pygame.image.save(self.display, "ImageVision3.jpg")
+        pygame.image.save(self.display, "ImageVision4.jpg")
 
     def _place_food(self):
         x = (
@@ -167,7 +170,14 @@ class Snake:
         # self.display.blit(text, [0, 0])
         pygame.display.flip()
 
-        pygame.image.save(self.display, "ImageVision.jpg")
+        if self.frame_iteration % 4 == 0:
+            pygame.image.save(self.display, "ImageVision1.jpg")
+        elif self.frame_iteration % 4 == 1:
+            pygame.image.save(self.display, "ImageVision2.jpg")
+        elif self.frame_iteration % 4 == 2:
+            pygame.image.save(self.display, "ImageVision3.jpg")
+        elif self.frame_iteration % 4 == 3:
+            pygame.image.save(self.display, "ImageVision4.jpg")
 
     def _move(self, action):
 
