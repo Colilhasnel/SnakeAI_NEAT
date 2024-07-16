@@ -17,9 +17,9 @@ class CQN(nn.Module):
     def __init__(self):
         super().__init__()
         self.convulutions = nn.Sequential(
-            # Input = 1*128*128 (Channel, Height, Width)
+            # Input = 4*128*128 (Channel, Height, Width)
             nn.Conv2d(
-                in_channels=1, out_channels=32, kernel_size=8, stride=4
+                in_channels=4, out_channels=32, kernel_size=8, stride=4
             ),  # Out = 32*31*31
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),  # Out = 32*15*15
@@ -127,12 +127,31 @@ class Agent:
         self.model = CQN()
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
-    def get_state(self):
-        image = cv2.imread("ImageVision.jpg", cv2.IMREAD_GRAYSCALE)
-        image = cv2.resize(image, (128, 128))
-        ret, bin_image = cv2.threshold(image, 10, 255, cv2.THRESH_BINARY)
-        bin_image = bin_image.reshape((1, bin_image.shape[0], bin_image.shape[1]))
-        return bin_image
+    def get_state(self, frame_iteration):
+
+        images = [
+            cv2.imread("ImageVision1.jpg", cv2.IMREAD_GRAYSCALE),
+            cv2.imread("ImageVision2.jpg", cv2.IMREAD_GRAYSCALE),
+            cv2.imread("ImageVision3.jpg", cv2.IMREAD_GRAYSCALE),
+            cv2.imread("ImageVision4.jpg", cv2.IMREAD_GRAYSCALE),
+        ]
+
+        bin_images = [[], [], [], []]
+
+        for i in range(0, 4):
+            images[i] = cv2.resize(images[i], (128, 128))
+            ret, images[i] = cv2.threshold(images[i], 10, 255, cv2.THRESH_BINARY)
+
+        frame_arrange = frame_iteration % 4
+
+        for i in range(0, 4):
+            bin_images[i] = images[(frame_arrange - i + 4) % 4]
+
+        # image1 = cv2.imread("ImageVision.jpg", cv2.IMREAD_GRAYSCALE)
+        # image1 = cv2.resize(image1, (128, 128))
+        # ret, bin_image = cv2.threshold(image1, 10, 255, cv2.THRESH_BINARY)
+        # bin_image = bin_image.reshape((1, bin_image.shape[0], bin_image.shape[1]))
+        return bin_images
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -184,13 +203,13 @@ def train():
     game = Snake()
 
     while True:
-        state_old = agent.get_state()
+        state_old = agent.get_state(game.frame_iteration)
 
         final_move = agent.get_action(state_old)
 
         reward, done, score = game.play_step(final_move)
 
-        state_new = agent.get_state()
+        state_new = agent.get_state(game.frame_iteration)
 
         agent.train_short_memory(state_old, final_move, reward, state_new, done)
 
